@@ -118,7 +118,21 @@ function publicEnhancer(){
  window.editCheckEntry=function(id,key){const c=CONFIG.checks.find(x=>x.id===id),old=patient.checks[id],arr=Array.isArray(old)?old:(old?.savedAt?[old]:[]),x=arr.find(v=>(v.id||v.savedAt)===key);if(!c||!x)return;const date=prompt('記録日を変更してください（例：2026-09-14）',String(x.recordDate||x.savedAt||'').slice(0,10));if(date===null)return;if(/^\d{4}-\d{2}-\d{2}$/.test(date))x.recordDate=date;else return alert('日付は「年-月-日」の形式で入力してください。');if(c.type==='scale'){const choices=(c.scaleOptions||[]).map((o,i)=>i+': '+o).join('\n');const v=prompt('番号を入力してください\n'+choices,String(x.scale??0));if(v!==null&&Number.isInteger(Number(v))&&c.scaleOptions[Number(v)]!==undefined){x.scale=Number(v);x.scaleText=c.scaleOptions[x.scale]}}else{for(const q of c.questions||[]){const now=x.answers?.[q.id]==='yes'?'はい':x.answers?.[q.id]==='no'?'いいえ':'';const v=prompt(q.text+'（はい／いいえ）',now);if(v!==null){x.answers=x.answers||{};if(v==='はい'||v.toLowerCase()==='yes')x.answers[q.id]='yes';else if(v==='いいえ'||v.toLowerCase()==='no')x.answers[q.id]='no'}}}x.createdAt=x.createdAt||x.savedAt||new Date().toISOString();x.updatedAt=new Date().toISOString();patient.checks[id]=arr;savePatient();render()};
  function applyAdvanced(){const target=document.querySelector('#checks .card');if(!target)return;target.innerHTML='<h2>チェックシート</h2><div class="notice">状態整理のための補助ツールです。診断を行うものではありません。</div>'+CONFIG.checks.filter(x=>x.enabled).map(advancedBlockV2).join('');protectImages()};const originalRender=render;render=function(){originalRender();applyAdvanced();decorateRecords()};applyAdvanced();decorateRecords();
 }
-function enhancedPublicHtml(){const oldLogin=data.loginButton?.enabled;if(data.loginButton)data.loginButton.enabled=false;let html;try{html=publicHtml()}finally{if(data.loginButton)data.loginButton.enabled=oldLogin}const addon='('+publicEnhancer.toString()+')();';return html.replace('</body>','<scr'+'ipt>'+addon+'</scr'+'ipt></body>')}
+function enhancedPublicHtml(){
+ const oldLogin=data.loginButton?.enabled;if(data.loginButton)data.loginButton.enabled=false;
+ let html;try{html=publicHtml()}finally{if(data.loginButton)data.loginButton.enabled=oldLogin}
+ const addon='('+publicEnhancer.toString()+')();';html=html.replace('</body>','<scr'+'ipt>'+addon+'</scr'+'ipt></body>');
+ // 公開側にMASTER専用の導線・設定を残さない
+ html=html.replace(/<a id="loginBtn"[\s\S]*?<\/a>/,'');
+ html=html.replace(/const login=document\\.getElementById\\('loginBtn'\\);[\\s\\S]*?else login\\.classList\\.add\\('hidden'\\);/,'');
+ html=html.replace(/"loginButton"\s*:\s*\{[^{}]*\}\s*,?/,'');
+ html=html.replace(/"autoSave"\s*:\s*(true|false)\s*,?/,'');
+ html=html.replace(/"imageOptions"\s*:\s*\{[^{}]*\}\s*,?/,'');
+ html=html.replace(/"featuresV3"\s*:\s*(true|false)\s*,?/,'');
+ // コメントとタグ間の不要空白を安全な範囲で削減。script/style内部は強く変形しない。
+ html=html.replace(/<!--[\s\S]*?-->/g,'').replace(/>\s+</g,'><').trim();
+ return html;
+}
 function exportPublic(){try{data.updatedAt=new Date().toISOString();const html=enhancedPublicHtml();const saved=saveNow('公開書出し');download('index.html',html,'text/html;charset=utf-8');if(!saved)setTimeout(()=>alert('PDFなどで端末の保存容量を超えていますが、公開用index.htmlの書き出しは実行しました。MASTER内容はJSONでもバックアップしてください。'),100)}catch(e){console.error(e);alert('公開HTMLを作成できませんでした。添付ファイルが大きすぎる可能性があります。PDFを小さくしてから再度お試しください。')}}
 function refreshPreview(){previewA.innerHTML=`<div class="card"><div class="head"><h2>公開側プレビュー / ログインボタン動作確認</h2><div class="actions"><button class="btn" onclick="testLoginButton()">ログインボタン確認</button><button class="btn" onclick="refreshPreview()">再読込</button></div></div><div id="loginTest" class="notice ok">公開側の設定URL: ${esc(data.loginButton.url||'(未設定)')}</div><iframe id="pv" class="preview"></iframe></div>`;setTimeout(()=>{const d=pv.contentDocument;d.open();d.write(enhancedPublicHtml());d.close()},20)}
 function testLoginButton(){const u=data.loginButton?.url||'';if(!data.loginButton?.enabled)return loginTest.textContent='公開側ログインボタンは非表示設定です。';if(!u)return loginTest.textContent='ログインボタンURLが未設定です。';loginTest.innerHTML='ログインボタンは表示ON。リンク先: <b>'+esc(u)+'</b><br>GitHub公開時はMASTERファイル名/配置とURLが一致しているか確認してください。';}
