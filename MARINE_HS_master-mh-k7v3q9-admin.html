@@ -131,7 +131,7 @@ function enhancedPublicHtml(){
  const addon='('+publicEnhancer.toString()+')();';html=html.replace('</body>','<scr'+'ipt>'+addon+'</scr'+'ipt></body>');
  // 公開側にMASTER専用の導線・設定を残さない
  html=html.replace(/<a id="loginBtn"[\s\S]*?<\/a>/,'');
- html=html.replace(/const login=document\\.getElementById\\('loginBtn'\\);[\\s\\S]*?else login\\.classList\\.add\\('hidden'\\);/,'');
+ html=html.replace(/const login=document\.getElementById\('loginBtn'\);[\s\S]*?else login\.classList\.add\('hidden'\);/,'');
  html=html.replace(/"loginButton"\s*:\s*\{[^{}]*\}\s*,?/,'');
  html=html.replace(/"autoSave"\s*:\s*(true|false)\s*,?/,'');
  html=html.replace(/"imageOptions"\s*:\s*\{[^{}]*\}\s*,?/,'');
